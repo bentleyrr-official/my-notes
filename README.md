@@ -16,7 +16,7 @@ It will open up a graphical interface, with saving files, file type detection, e
 # How to compile into ".exe"
 Run `pip install pyinstaller`
 
-Run `pyinstaller --onefile --noconsole --icon=My Notes.ico main.py`
+Run `pyinstaller --onefile --noconsole --icon="My Notes.ico" main.py`
 
 It should compile, into a .exe.
 
