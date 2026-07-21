@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" style="background:#ffffff">
+<head>
+<meta charset="UTF-8">
+<title>My Notes</title>
+<style>
+  html[data-theme="light"] { color-scheme: only light; }
+  html[data-theme="dark"] { color-scheme: only dark; }
+  html[data-theme="blue"] { color-scheme: only dark; }
+
+  :root {
+    --font: -apple-system, "Segoe UI", "Inter", Roboto, sans-serif;
+  }
+
+  html[data-theme="light"] {
+    --bg: #ffffff; --bg-elev: #f4f4f5; --border: #e2e2e5; --text: #1c1c1e;
+    --text-dim: #8a8a8e; --accent: #3667a8; --accent-soft: #dce7f3;
+    --gutter-bg: #f4f4f5; --gutter-text: #b3b3b8; --caret: #1c1c1e;
+    --select: #d5e3f3; --comment: #7a8a6a; --keyword: #9a3f3f; --string: #4c6f5e;
+    --number: #56707f; --type: #3c6e8f; --func: #7a5a9a;
+  }
+  html[data-theme="dark"] {
+    --bg: #1c1b1a; --bg-elev: #242322; --border: #35332f; --text: #e8e3d8;
+    --text-dim: #8f897c; --accent: #6ea8dc; --accent-soft: #223245;
+    --gutter-bg: #201f1e; --gutter-text: #5c5850; --caret: #f2ede0;
+    --select: #2c3d4e; --comment: #7f8f6d; --keyword: #e08787; --string: #9dc9ac;
+    --number: #8fb0c4; --type: #7fb8d9; --func: #c6a4e8;
+  }
+  html[data-theme="blue"] {
+    --bg: #10233d; --bg-elev: #16304f; --border: #294f78; --text: #dce8f7;
+    --text-dim: #7fa0c4; --accent: #5fb0e8; --accent-soft: #1c3f66;
+    --gutter-bg: #122b48; --gutter-text: #4f7096; --caret: #eef4fb;
+    --select: #2a527f; --comment: #6f93b8; --keyword: #7dd3fc; --string: #a7e0c2;
+    --number: #c7d8ea; --type: #91d8c8; --func: #e0a9e8;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; flex-direction: column; height: 100vh;
+    background: var(--bg); color: var(--text); font-family: var(--font);
+    overflow: hidden; user-select: none;
+  }
+
+  #titlebar {
+    display: flex; align-items: center; gap: 14px;
+    padding: 9px 14px; background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    -webkit-app-region: drag;
+  }
+  #wordmark {
+    font-family: var(--font); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.06em; color: var(--accent); flex-shrink: 0;
+    padding: 2px 6px; border: 1px solid var(--accent); border-radius: 4px;
+  }
+  #filename { font-size: 12.5px; color: var(--text-dim); }
+  #unsaved-pill {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--accent); border: 1px solid var(--accent); border-radius: 3px;
+    padding: 1px 5px; opacity: 0; transform: translateY(1px);
+    transition: opacity .12s ease;
+  }
+  #unsaved-pill.show { opacity: 0.85; }
+  #titlebar .spacer { flex: 1; }
+
+  .toolbar { display: flex; gap: 4px; -webkit-app-region: no-drag; }
+  .tbtn {
+    display: flex; align-items: center; gap: 6px;
+    border: none; border-bottom: 2px solid transparent; background: transparent;
+    color: var(--text-dim); padding: 5px 8px 3px; cursor: pointer;
+    font-family: var(--font); font-size: 12px;
+  }
+  .tbtn:hover { color: var(--text); border-bottom-color: var(--accent); }
+  .tbtn svg { width: 13px; height: 13px; }
+
+  #theme-strip {
+    display: flex; align-items: center; gap: 6px; -webkit-app-region: no-drag;
+    padding-left: 10px; border-left: 1px solid var(--border);
+  }
+  .theme-dot {
+    width: 15px; height: 15px; border-radius: 4px; cursor: pointer;
+    border: 1px solid var(--border); position: relative;
+  }
+  .theme-dot[data-active="true"]::after {
+    content: ""; position: absolute; inset: -4px; border: 1.5px solid var(--accent); border-radius: 6px;
+  }
+
+  #editor-wrap { flex: 1; display: flex; min-height: 0; position: relative; }
+  #gutter {
+    width: 46px; flex-shrink: 0; background: var(--gutter-bg); color: var(--gutter-text);
+    font-family: var(--font); font-size: 13px; line-height: 20px;
+    text-align: right; padding: 10px 8px 10px 0; overflow: hidden;
+    border-right: 1px solid var(--border); white-space: pre;
+  }
+  #code-wrap { flex: 1; position: relative; overflow: hidden; }
+  #highlight, #editor {
+    position: absolute; inset: 0; margin: 0; border: 0; padding: 10px 16px;
+    font-family: var(--font); font-size: 13px; line-height: 20px;
+    white-space: pre-wrap; word-break: break-word; overflow: auto;
+  }
+  #highlight {
+    color: var(--text); pointer-events: none; background: var(--bg);
+  }
+  #editor {
+    background: transparent; color: transparent; caret-color: var(--caret);
+    resize: none; outline: none; z-index: 1;
+    -webkit-text-fill-color: transparent;
+  }
+  #editor::selection { background: var(--select); }
+
+  .tok-comment { color: var(--comment); font-style: italic; }
+  .tok-keyword { color: var(--keyword); font-weight: 600; }
+  .tok-string { color: var(--string); }
+  .tok-number { color: var(--number); }
+  .tok-type { color: var(--type); }
+  .tok-func { color: var(--func); }
+
+  #statusbar {
+    display: flex; align-items: center; gap: 16px;
+    padding: 5px 14px; background: var(--bg-elev); border-top: 1px solid var(--border);
+    color: var(--text-dim); font-size: 11.5px; font-family: var(--font);
+  }
+  #statusbar .lang { color: var(--accent); font-weight: 600; }
+  #statusbar .spacer { flex: 1; }
+
+  #modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+    align-items: center; justify-content: center; z-index: 50;
+  }
+  #modal-overlay.open { display: flex; }
+  #modal {
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 20px; width: 320px; box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+  }
+  #modal p { margin: 0 0 14px 0; font-size: 13px; color: var(--text); line-height: 1.5; }
+  #modal .row { display: flex; gap: 8px; justify-content: flex-end; }
+  #modal button {
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    padding: 6px 12px; border-radius: 6px; font-size: 12.5px; cursor: pointer;
+  }
+  #modal button.primary { background: var(--accent); color: var(--bg-elev); border-color: var(--accent); }
+  #modal button:hover { filter: brightness(1.05); }
+</style>
+</head>
+<body>
+
+<div id="titlebar">
+  <span id="wordmark">notes</span>
+  <span id="filename">Untitled</span>
+  <span id="unsaved-pill">Unsaved</span>
+  <div class="spacer"></div>
+  <div class="toolbar">
+    <button class="tbtn" id="btn-new" title="New (Ctrl+N)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h9l5 5v15H6z"/><path d="M12 11v6M9 14h6"/></svg>New
+    </button>
+    <button class="tbtn" id="btn-open" title="Open (Ctrl+O)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Open
+    </button>
+    <button class="tbtn" id="btn-save" title="Save (Ctrl+S)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg>Save
+    </button>
+  </div>
+  <div id="theme-strip"></div>
+</div>
+
+<div id="editor-wrap">
+  <div id="gutter">1</div>
+  <div id="code-wrap">
+    <pre id="highlight"><code id="highlight-code"></code></pre>
+    <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+  </div>
+</div>
+
+<div id="statusbar">
+  <span class="lang" id="st-lang">Plain Text</span>
+  <span id="st-words">0 words</span>
+  <span id="st-chars">0 chars</span>
+  <div class="spacer"></div>
+  <span id="st-pos">Ln 1, Col 1</span>
+</div>
+
+<div id="modal-overlay">
+  <div id="modal">
+    <p id="modal-text">You have unsaved changes. Save before continuing?</p>
+    <div class="row">
+      <button id="modal-discard">Don't Save</button>
+      <button id="modal-cancel">Cancel</button>
+      <button id="modal-save" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const THEMES = [
+  { id: "light", label: "Light" },
+  { id: "dark", label: "Dark" },
+  { id: "blue", label: "Blue" },
+];
+
+const KEYWORDS = {
+  python: "False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield self".split(" "),
+  csharp: "abstract as base bool break byte case catch char checked class const continue decimal default delegate do double else enum event explicit extern false finally fixed float for foreach goto if implicit in int interface internal is lock long namespace new null object operator out override params private protected public readonly ref return sbyte sealed short sizeof stackalloc static string struct switch this throw true try typeof uint ulong unchecked unsafe ushort using var virtual void volatile while".split(" "),
+  java: "abstract assert boolean break byte case catch char class const continue default do double else enum extends final finally float for goto if implements import instanceof int interface long native new package private protected public return short static strictfp super switch synchronized this throw throws transient try void volatile while true false null".split(" "),
+  javascript: "break case catch class const continue debugger default delete do else export extends finally for function if import in instanceof let new return super switch this throw try typeof var void while with yield true false null undefined async await of".split(" "),
+  typescript: "break case catch class const continue debugger default delete do else export extends finally for function if import in instanceof interface let new return super switch this throw try type typeof var void while with yield true false null undefined async await of enum implements private public protected readonly namespace".split(" "),
+  c: "auto break case char const continue default do double else enum extern float for goto if int long register return short signed sizeof static struct switch typedef union unsigned void volatile while".split(" "),
+  cpp: "alignas alignof and asm auto bool break case catch char class const constexpr continue decltype default delete do double dynamic_cast else enum explicit export extern false float for friend goto if inline int long mutable namespace new noexcept nullptr operator private protected public register reinterpret_cast return short signed sizeof static static_cast struct switch template this throw true try typedef typeid typename union unsigned using virtual void volatile while".split(" "),
+  go: "break case chan const continue default defer else fallthrough for func go goto if import interface map package range return select struct switch type var".split(" "),
+  rust: "as break const continue crate else enum extern false fn for if impl in let loop match mod move mut pub ref return self Self static struct super trait true type unsafe use where while async await dyn".split(" "),
+  php: "abstract and array as break callable case catch class clone const continue declare default die do echo else elseif empty enddeclare endfor endforeach endif endswitch endwhile extends final finally fn for foreach function global goto if implements include include_once instanceof insteadof interface isset list namespace new or print private protected public require require_once return static switch throw trait try unset use var while xor yield true false null".split(" "),
+  ruby: "BEGIN END alias and begin break case class def defined? do else elsif end ensure false for if in module next nil not or redo rescue retry return self super then true undef unless until when while yield".split(" "),
+  swift: "associatedtype class deinit enum extension fileprivate func import init inout internal let open operator private protocol public static struct subscript typealias var break case continue default defer do else fallthrough for guard if in repeat return switch where while true false nil".split(" "),
+  kotlin: "as break class continue do else false for fun if in interface is null object package return super this throw true try typealias val var when while import private public protected internal companion override open abstract data".split(" "),
+};
+
+const TYPES = {
+  csharp: "int string bool double float decimal char byte long short object var void uint ulong ushort sbyte".split(" "),
+  java: "int String boolean double float char byte long short Object void".split(" "),
+  c: "int char double float long short unsigned signed void".split(" "),
+  cpp: "int char double float long short unsigned signed void bool auto string".split(" "),
+  typescript: "string number boolean any void never unknown object".split(" "),
+};
+
+const LINE_COMMENT = { python: "#", ruby: "#", bash: "#", yaml: "#" };
+const BLOCK_COMMENT_LANGS = new Set(["csharp","java","javascript","typescript","c","cpp","go","rust","php","swift","kotlin"]);
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function highlightCode(text, lang) {
+  if (lang === "plain" || lang === "markdown" || lang === "html" || lang === "css" || lang === "xml" || lang === "yaml" || lang === "sql") {
+    if (lang === "json") {}
+    return escapeHtml(text);
+  }
+  if (lang === "json") return highlightJson(text);
+
+  const keywords = new Set(KEYWORDS[lang] || []);
+  const types = new Set(TYPES[lang] || []);
+  const lineComment = LINE_COMMENT[lang] || "//";
+  const blockComment = BLOCK_COMMENT_LANGS.has(lang);
+
+  const tokenRe = /(\/\*[\s\S]*?\*\/)|(\/\/[^\n]*)|(#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(\b\d+\.?\d*\b)|(\b[A-Za-z_][A-Za-z0-9_]*\b)(\s*\()?/g;
+
+  let out = "";
+  let last = 0;
+  let m;
+  while ((m = tokenRe.exec(text)) !== null) {
+    out += escapeHtml(text.slice(last, m.index));
+    last = tokenRe.lastIndex;
+    const [full, blockC, lineC, hashC, str, num, word, callParen] = m;
+    if (blockC && blockComment) { out += `<span class="tok-comment">${escapeHtml(blockC)}</span>`; continue; }
+    if (lineC && lineComment === "//") { out += `<span class="tok-comment">${escapeHtml(lineC)}</span>`; continue; }
+    if (hashC && lineComment === "#") { out += `<span class="tok-comment">${escapeHtml(hashC)}</span>`; continue; }
+    if (blockC || lineC || hashC) { out += escapeHtml(full); continue; }
+    if (str) { out += `<span class="tok-string">${escapeHtml(str)}</span>`; continue; }
+    if (num) { out += `<span class="tok-number">${escapeHtml(num)}</span>`; continue; }
+    if (word) {
+      let cls = null;
+      if (keywords.has(word)) cls = "tok-keyword";
+      else if (types.has(word)) cls = "tok-type";
+      else if (callParen) cls = "tok-func";
+      out += cls ? `<span class="${cls}">${escapeHtml(word)}</span>` : escapeHtml(word);
+      if (callParen) out += escapeHtml(callParen);
+      continue;
+    }
+  }
+  out += escapeHtml(text.slice(last));
+  return out;
+}
+
+function highlightJson(text) {
+  const re = /("(?:\\.|[^"\\])*")(\s*:)?|(-?\b\d+\.?\d*\b)/g;
+  let out = "", last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    out += escapeHtml(text.slice(last, m.index));
+    last = re.lastIndex;
+    if (m[1]) {
+      const cls = m[2] ? "tok-func" : "tok-string";
+      out += `<span class="${cls}">${escapeHtml(m[1])}</span>${m[2] ? escapeHtml(m[2]) : ""}`;
+    } else if (m[3]) {
+      out += `<span class="tok-number">${escapeHtml(m[3])}</span>`;
+    }
+  }
+  out += escapeHtml(text.slice(last));
+  return out;
+}
+
+const LANG_LABELS = {
+  plain: "Plain Text", python: "Python", javascript: "JavaScript", typescript: "TypeScript",
+  java: "Java", c: "C", cpp: "C++", csharp: "C#", go: "Go", ruby: "Ruby", php: "PHP",
+  html: "HTML", css: "CSS", json: "JSON", xml: "XML", bash: "Shell", sql: "SQL",
+  rust: "Rust", swift: "Swift", kotlin: "Kotlin", markdown: "Markdown", yaml: "YAML",
+};
+
+const editor = document.getElementById("editor");
+const highlightCodeEl = document.getElementById("highlight-code");
+const highlightEl = document.getElementById("highlight");
+const gutter = document.getElementById("gutter");
+const filenameEl = document.getElementById("filename");
+const dotEl = document.getElementById("unsaved-pill");
+const stLang = document.getElementById("st-lang");
+const stWords = document.getElementById("st-words");
+const stChars = document.getElementById("st-chars");
+const stPos = document.getElementById("st-pos");
+
+let state = { path: null, name: "Untitled", language: "plain", modified: false };
+
+const THEME_BG = {
+  light: "#ffffff", dark: "#1c1b1a", blue: "#10233d",
+};
+
+function applyTheme(id) {
+  document.documentElement.setAttribute("data-theme", id);
+  document.documentElement.style.background = THEME_BG[id];
+  localStorage.setItem("mynotes-theme", id);
+  document.querySelectorAll(".theme-dot").forEach(d => {
+    d.dataset.active = d.dataset.theme === id ? "true" : "false";
+  });
+}
+
+const THEME_SWATCH = {
+  light: "#f4f4f5", dark: "#242322", blue: "#16304f",
+};
+
+function buildThemeStrip() {
+  const strip = document.getElementById("theme-strip");
+  strip.innerHTML = "";
+  THEMES.forEach(t => {
+    const dot = document.createElement("div");
+    dot.className = "theme-dot";
+    dot.title = t.label;
+    dot.style.background = THEME_SWATCH[t.id];
+    dot.dataset.theme = t.id;
+    dot.onclick = () => applyTheme(t.id);
+    strip.appendChild(dot);
+  });
+}
+
+function renderHighlight() {
+  const text = editor.value;
+  highlightCodeEl.innerHTML = highlightCode(text, state.language) + "\n";
+}
+
+function renderGutter() {
+  const lines = editor.value.split("\n").length;
+  let out = "";
+  for (let i = 1; i <= lines; i++) out += i + "\n";
+  gutter.textContent = out;
+}
+
+function updateStatus() {
+  const text = editor.value;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  stWords.textContent = words + " words";
+  stChars.textContent = text.length + " chars";
+  const upTo = editor.value.slice(0, editor.selectionStart);
+  const lines = upTo.split("\n");
+  stPos.textContent = `Ln ${lines.length}, Col ${lines[lines.length - 1].length + 1}`;
+  stLang.textContent = LANG_LABELS[state.language] || "Plain Text";
+}
+
+function syncScroll() {
+  highlightEl.scrollTop = editor.scrollTop;
+  highlightEl.scrollLeft = editor.scrollLeft;
+  gutter.scrollTop = editor.scrollTop;
+}
+
+function setModified(m) {
+  state.modified = m;
+  dotEl.classList.toggle("show", m);
+}
+
+function refreshTitle() {
+  filenameEl.textContent = state.name;
+  document.title = (state.modified ? "*" : "") + state.name + " - My Notes";
+}
+
+function fullRefresh() {
+  renderHighlight();
+  renderGutter();
+  updateStatus();
+  refreshTitle();
+}
+
+editor.addEventListener("input", () => {
+  setModified(true);
+  fullRefresh();
+});
+editor.addEventListener("scroll", syncScroll);
+editor.addEventListener("keyup", updateStatus);
+editor.addEventListener("click", updateStatus);
+editor.addEventListener("keydown", (e) => {
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const s = editor.selectionStart, en = editor.selectionEnd;
+    editor.value = editor.value.slice(0, s) + "    " + editor.value.slice(en);
+    editor.selectionStart = editor.selectionEnd = s + 4;
+    editor.dispatchEvent(new Event("input"));
+  }
+});
+
+function loadDoc(path, name, content, language) {
+  state = { path, name, language, modified: false };
+  editor.value = content;
+  fullRefresh();
+  setModified(false);
+}
+
+let pendingAction = null;
+
+function showModal(message, action) {
+  document.getElementById("modal-text").textContent = message;
+  document.getElementById("modal-overlay").classList.add("open");
+  pendingAction = action;
+}
+function hideModal() { document.getElementById("modal-overlay").classList.remove("open"); }
+
+document.getElementById("modal-cancel").onclick = hideModal;
+document.getElementById("modal-discard").onclick = () => { hideModal(); if (pendingAction) pendingAction(); };
+document.getElementById("modal-save").onclick = async () => {
+  hideModal();
+  const ok = await doSave();
+  if (ok && pendingAction) pendingAction();
+};
+
+function guardUnsaved(action) {
+  if (state.modified) {
+    showModal("You have unsaved changes. Save before continuing?", action);
+  } else {
+    action();
+  }
+}
+
+async function doSave() {
+  if (state.path) {
+    const res = await window.pywebview.api.save_file(state.path, editor.value);
+    if (res && res.ok) { setModified(false); refreshTitle(); return true; }
+    return false;
+  }
+  return doSaveAs();
+}
+
+async function doSaveAs() {
+  const res = await window.pywebview.api.save_file_as(editor.value);
+  if (res && !res.error) {
+    state.path = res.path; state.name = res.name; state.language = res.language;
+    setModified(false); fullRefresh();
+    return true;
+  }
+  return false;
+}
+
+document.getElementById("btn-new").onclick = () => {
+  guardUnsaved(() => loadDoc(null, "Untitled", "", "plain"));
+};
+
+document.getElementById("btn-open").onclick = () => {
+  guardUnsaved(async () => {
+    const res = await window.pywebview.api.open_file();
+    if (res && !res.error) loadDoc(res.path, res.name, res.content, res.language);
+  });
+};
+
+document.getElementById("btn-save").onclick = doSave;
+
+document.addEventListener("keydown", (e) => {
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === "n") { e.preventDefault(); document.getElementById("btn-new").click(); }
+  if (mod && e.key.toLowerCase() === "o") { e.preventDefault(); document.getElementById("btn-open").click(); }
+  if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); doSave(); }
+});
+
+buildThemeStrip();
+applyTheme(localStorage.getItem("mynotes-theme") || "light");
+fullRefresh();
+editor.focus();
+</script>
+</body>
+</html>
