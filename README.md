@@ -1,2 +1,5 @@
 # My Notes
-A simple notes app, for one of my first open-source projects! :)
+My Notes is a **simple notepad/notes** app.
+
+# AI Notice
+Parts of this project were AI-assisted.
