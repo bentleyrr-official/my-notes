@@ -1,23 +1,51 @@
 # My Notes
-My Notes is a **simple notepad/notes** app.
 
-# AI Notice
-Parts of this project were AI-assisted.
+My Notes is an app made by BentleyRR, as a simple lil notes app!
 
-# How to run
-Download [Python](https://www.python.org/downloads/)
+## AI Notice
 
-Go to the same directory as [main.py](https://github.com/bentleyrr-official/my-notes/blob/main/main.py)
+This project was developed with the assistance of AI. All generated code has been reviewed, modified, and integrated as part of the development process.
 
-Run `py main.py`
-It will open up a graphical interface, with saving files, file type detection, etc.
+## Requirements
+
+* [Python 3.10 or newer](https://www.python.org/downloads)
+* [pip](https://pypi.org/project/pip/)
+* [Git](https://github.com/git-guides/install-git) (if cloning the repo)
 
 
-# How to compile into ".exe"
-Run `pip install pyinstaller`
+## Clone the Repository
 
-Run `pyinstaller --onefile --noconsole --icon="My Notes.ico" main.py`
+```bash
+git clone https://github.com/bentleyrr-official/my-notes.git
+cd my-notes
+```
 
-It should compile, into a .exe.
+## Running
 
-Have fun!
+Run the application directly from the project root:
+
+```bash
+python main.py
+```
+
+## Building
+
+This project can be packaged into a standalone executable using PyInstaller.
+
+Install [PyInstaller](https://github.com/pyinstaller/pyinstaller):
+
+```bash
+pip install pyinstaller
+```
+
+Build the application:
+
+```bash
+pyinstaller --clean --onefile --noconsole --icon="My Notes.ico" --add-data "notes_ui.html;." main.py
+```
+
+The compiled executable will be placed in:
+
+```text
+dist/
+```
